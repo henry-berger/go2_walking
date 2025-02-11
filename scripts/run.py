@@ -1,3 +1,4 @@
+#! /usr/bin/python
 import isaacgym
 
 assert isaacgym
@@ -9,6 +10,8 @@ import glob
 import pickle as pkl
 
 import rospy
+from pathlib import Path
+import rospkg
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header, Float32MultiArray
 import tf
@@ -40,7 +43,11 @@ def load_policy(logdir):
 
 
 def load_env(label, headless=False):
-    dirs = glob.glob(f"../runs/{label}/*")
+
+    # # If running without ros, use the next line instead of the two subsequent ones
+    # dirs = glob.glob(f"../runs/{label}/*")
+    robot = Path(rospkg.RosPack().get_path("robot"))
+    dirs = glob.glob(f"{robot}/go2_walking/runs/{label}/*")
     logdir = sorted(dirs)[0]
 
     with open(logdir + "/parameters.pkl", "rb") as file:
