@@ -20,8 +20,17 @@ from go2_gym.envs import *
 from go2_gym.envs.base.legged_robot_config import Cfg
 from go2_gym.envs.go2.go2_config import config_go2
 from go2_gym.envs.go2.velocity_tracking import VelocityTrackingEasyEnv
+from isaacgym.torch_utils import quat_rotate_inverse
 
 from tqdm import tqdm
+
+global target_state 
+target_state= np.array([0., 0., 0.])
+
+def target_callback(data):
+    global target_state
+    # print("Updating target state to ", data.data)
+    target_state = np.array(data.data)
 
 
 def load_policy(logdir):
@@ -119,6 +128,8 @@ def play_go2(headless=True):
     import os
 
     rospy.init_node("state_publisher", anonymous=True)
+
+    rospy.Subscriber("target_pos", Float32MultiArray, target_callback)
     br = tf.TransformBroadcaster()
     pub = rospy.Publisher("joint_states", JointState, queue_size=10)
     sensor_pub = rospy.Publisher("sensor_data", Float32MultiArray, queue_size=10)
@@ -175,12 +186,44 @@ def play_go2(headless=True):
 
     foot_contacts = [False, False, False, False]
 
-    for i in tqdm(range(num_eval_steps)):
+    for i in range(num_eval_steps):
         with torch.no_grad():
             actions = policy(obs)
-        env.commands[:, 0] = x_vel_cmd
-        env.commands[:, 1] = y_vel_cmd
-        env.commands[:, 2] = yaw_vel_cmd
+
+        base_quat = env.env.base_quat.cpu()
+        base_pos = env.env.base_pos[0].cpu().numpy()
+        base_pos = base_pos - np.array([5.,5.,0.]) # TODO: Make this not hard-coded
+        target = target_state[:2] - base_pos[:2]
+
+        target_vec = torch.Tensor(np.array([[target[0], target[1], 0]]))
+
+        target = quat_rotate_inverse(base_quat, target_vec)[0,:2].cpu().numpy()
+        target_vel = target / np.sqrt(np.sum(np.square(target)))
+        
+
+        target_xvel = target_vel[0]
+        target_yvel = target_vel[1]
+        
+        # if target_yvel > 0.2:
+        #     yaw_cmd = -.5
+        # elif target_yvel < -0.2:
+        #     yaW_cmd = .5
+
+        # if np.abs(target_yvel) > 0.5:
+        #     target_yvel /= a
+
+        yaw_cmd = 0
+
+        # x_axis = quat_rotate_inverse(base_quat, torch.Tensor([[1.,0.,0.]]))
+        # y_axis = quat_rotate_inverse(base_quat, torch.Tensor([[0.,1.,0.]]))
+
+        base_pos = env.env.base_pos[0].cpu().numpy()
+        base_pos = base_pos - np.array([5.,5.,0.]) # TODO: Make this not hard-coded
+        target = target_state[:2] - base_pos[:2]
+        target /= np.sqrt(np.sum(np.square(target)))
+        env.commands[:, 0] = torch.Tensor([target_xvel])
+        env.commands[:, 1] = torch.Tensor([target_yvel])
+        env.commands[:, 2] = torch.Tensor([yaw_cmd])
         env.commands[:, 3] = body_height_cmd
         env.commands[:, 4] = step_frequency_cmd
         env.commands[:, 5:8] = gait
@@ -192,14 +235,14 @@ def play_go2(headless=True):
         obs, rew, done, info = env.step(actions)
 
         measured_x_vels[i] = env.base_lin_vel[0, 0]
-        joint_positions[i] = env.dof_pos[0, :].cpu()
+        joint_positions[i] = env.dof_pos[0].cpu()
 
         t = time.time()
         header = Header(seq=0, stamp=rospy.Time(t), frame_id="World")
-        position = env.dof_pos[0, :].cpu()
+        position = env.dof_pos[0].cpu().numpy()
         pub.publish(JointState(header, name, position, velocity, effort))
-        base_pos = env.env.base_pos[0, :].cpu()
-        base_quat = env.env.base_quat[0, :].cpu()
+        base_pos = env.env.base_pos[0].cpu().numpy()
+        base_quat = env.env.base_quat[0].cpu().numpy()
         # quat_indices = [1, 2, 3, 0]
         quat_indices = [0, 1, 2, 3]
         br.sendTransform(
@@ -232,53 +275,6 @@ def play_go2(headless=True):
 
         ###### -----------ldt---------------
         # joint_torques[i] = env.torques.detach().cpu().numpy()
-
-    # plot target and measured forward velocity
-    from matplotlib import pyplot as plt
-
-    fig, axs = plt.subplots(3, 1, figsize=(12, 5))
-    axs[0].plot(
-        np.linspace(0, num_eval_steps * env.dt, num_eval_steps),
-        measured_x_vels,
-        color="black",
-        linestyle="-",
-        label="Measured",
-    )
-    axs[0].plot(
-        np.linspace(0, num_eval_steps * env.dt, num_eval_steps),
-        target_x_vels,
-        color="black",
-        linestyle="--",
-        label="Desired",
-    )
-    axs[0].legend()
-    axs[0].set_title("Forward Linear Velocity")
-    axs[0].set_xlabel("Time (s)")
-    axs[0].set_ylabel("Velocity (m/s)")
-
-    axs[1].plot(
-        np.linspace(0, num_eval_steps * env.dt, num_eval_steps),
-        joint_positions,
-        linestyle="-",
-        label="Measured",
-    )
-    axs[1].set_title("Joint Positions")
-    axs[1].set_xlabel("Time (s)")
-    axs[1].set_ylabel("Joint Position (rad)")
-
-    axs[2].plot(
-        np.linspace(0, num_eval_steps * env.dt, num_eval_steps),
-        joint_torques,
-        linestyle="-",
-        label="Measured",
-    )
-    axs[2].set_title("Joint Torques")
-    axs[2].set_xlabel("Time (s)")
-    axs[2].set_ylabel("Joint Torques (Nm)")
-
-    plt.tight_layout()
-    plt.show()
-
 
 if __name__ == "__main__":
     # to see the environment rendering, set headless=False
