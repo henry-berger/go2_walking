@@ -26,9 +26,18 @@ class Terrain:
 
         self.height_field_raw = np.zeros((self.tot_rows, self.tot_cols), dtype=np.int16)
 
+
         self.initialize_terrains()
 
-        self.heightsamples = self.height_field_raw
+        xs, ys = np.meshgrid(np.linspace(-np.pi,np.pi,self.tot_cols), np.linspace(-np.pi,np.pi,self.tot_rows))
+
+        self.height_field_raw = np.int16((1+np.sin(xs) * np.cos(ys)) * 1024) 
+        print(self.height_field_raw)
+        self.cfg.vertical_scale = 1/1024
+        print(self.height_field_raw)
+
+
+        self.heightsamples = self.height_field_raw.ravel()
         if self.type == "trimesh":
             self.vertices, self.triangles = terrain_utils.convert_heightfield_to_trimesh(self.height_field_raw,
                                                                                          self.cfg.horizontal_scale,
@@ -149,7 +158,7 @@ class Terrain:
             pass
         elif choice < proportions[8]:
             terrain_utils.random_uniform_terrain(terrain, min_height=-cfg.terrain_noise_magnitude,
-                                                 max_height=cfg.terrain_noise_magnitude, step=0.005,
+                                                 max_height=cfg.terrain_noise_magnitude, step=1.0,
                                                  downsampled_scale=0.2)
         elif choice < proportions[9]:
             terrain_utils.random_uniform_terrain(terrain, min_height=-0.05, max_height=0.05,
