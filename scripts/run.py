@@ -78,14 +78,17 @@ def load_env(label, headless=False):
 
     Cfg.env.num_recording_envs = 1
     Cfg.env.num_envs = 1
-    Cfg.terrain.num_rows = 5
-    Cfg.terrain.num_cols = 5
+    Cfg.terrain.num_rows = 10
+    Cfg.terrain.num_cols = 10
     Cfg.terrain.border_size = 0
     Cfg.terrain.center_robots = True
     Cfg.terrain.center_span = 1
-    Cfg.terrain.teleport_robots = True
+    Cfg.terrain.teleport_robots = False
     Cfg.terrain.mesh_type = "heightfield"
     Cfg.terrain.terrain_noise_magnitude = 0.01
+    Cfg.terrain.terrain_length = 1
+    Cfg.terrain.terrain_width = 1
+
 
     Cfg.domain_rand.lag_timesteps = 6
     Cfg.domain_rand.randomize_lag_timesteps = True
@@ -167,6 +170,8 @@ def play_go2(headless=True):
     joint_torques = np.zeros((num_eval_steps, 12))
 
     obs = env.reset()
+    env.set_main_agent_pose([1,1,1.5],[0,0,0,1])
+    
 
     foot_contacts = [False, False, False, False]
 
@@ -198,7 +203,8 @@ def play_go2(headless=True):
         # quat_indices = [1, 2, 3, 0]
         quat_indices = [0, 1, 2, 3]
         br.sendTransform(
-            ((base_pos[0] + 5) % 10 - 5, (base_pos[1] + 5) % 10 - 5, base_pos[2]),
+            # ((base_pos[0] + 5) % 10 - 5, (base_pos[1] + 5) % 10 - 5, base_pos[2]),
+            base_pos - np.array([5,5,0]), # TODO: Make this not hard-coded
             (
                 base_quat[quat_indices[0]],
                 base_quat[quat_indices[1]],
@@ -221,7 +227,7 @@ def play_go2(headless=True):
 
         foot_data = np.array(foot_data)
         foot_data = foot_data.reshape(-1, 3)
-        foot_data[:, :2] = (foot_data[:, :2] + 5) % 10 - 5
+        foot_data[:, :2] = (foot_data[:, :2] - 5)  # TODO: Make this not hard-coded
         sensor_pub.publish(Float32MultiArray(data=foot_data.ravel()))
 
         ###### -----------ldt---------------
