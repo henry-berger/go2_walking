@@ -201,18 +201,21 @@ def play_go2(headless=True):
         target_vel = target / np.sqrt(np.sum(np.square(target)))
         
 
-        target_xvel = target_vel[0]
-        target_yvel = target_vel[1]
+        target_xvel = target_vel[0] * 1.5
+        target_yvel = target_vel[1] * 0
         
-        # if target_yvel > 0.2:
-        #     yaw_cmd = -.5
-        # elif target_yvel < -0.2:
-        #     yaW_cmd = .5
+        if target_vel[1] * np.sign(target_vel[0]) > 0.2:
+            yaw_cmd = 1.5 * min(np.abs(target_vel[1]*3), 1)
+        elif target_vel[1] * np.sign(target_vel[0]) < -0.2:
+            yaw_cmd = -1.5 * min(np.abs(target_vel[1]*3), 1)
+        else:
+            yaw_cmd = 0
+
 
         # if np.abs(target_yvel) > 0.5:
         #     target_yvel /= a
 
-        yaw_cmd = 0
+        # yaw_cmd = 0
 
         # x_axis = quat_rotate_inverse(base_quat, torch.Tensor([[1.,0.,0.]]))
         # y_axis = quat_rotate_inverse(base_quat, torch.Tensor([[0.,1.,0.]]))
