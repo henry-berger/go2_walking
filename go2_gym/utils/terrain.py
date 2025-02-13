@@ -31,7 +31,7 @@ class Terrain:
 
         xs, ys = np.meshgrid(np.linspace(-np.pi,np.pi,self.tot_cols), np.linspace(-np.pi,np.pi,self.tot_rows))
 
-        self.height_field_raw = np.int16((2+np.sin(xs) * np.cos(ys)) * 1024) 
+        self.height_field_raw = np.int16((np.sin(xs) * np.cos(ys)) * 1024) 
         print(self.height_field_raw)
         self.cfg.vertical_scale = 2 ** -11
         print(self.height_field_raw)

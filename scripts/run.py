@@ -181,7 +181,7 @@ def play_go2(headless=True):
     joint_torques = np.zeros((num_eval_steps, 12))
 
     obs = env.reset()
-    env.set_main_agent_pose([1,1,1.5],[0,0,0,1])
+    env.set_main_agent_pose([1,1,.5],[0,0,0,1])
     
 
     foot_contacts = [False, False, False, False]
@@ -264,17 +264,19 @@ def play_go2(headless=True):
 
         foot_data = []
 
-        for index, foot in enumerate(env.feet_indices):
-            foot_state = env.env.contact_forces[0, foot, 2] > 0
-            if foot_state and not foot_contacts[index]:
-                foot_data.append(env.env.foot_positions.detach().cpu().numpy())
+        if i > 100:
 
-            foot_contacts[index] = foot_state
+            for index, foot in enumerate(env.feet_indices):
+                foot_state = env.env.contact_forces[0, foot, 2] > 0
+                if foot_state and not foot_contacts[index]:
+                    foot_data.append(env.env.foot_positions.detach().cpu().numpy())
 
-        foot_data = np.array(foot_data)
-        foot_data = foot_data.reshape(-1, 3)
-        foot_data[:, :2] = (foot_data[:, :2] - 5)  # TODO: Make this not hard-coded
-        sensor_pub.publish(Float32MultiArray(data=foot_data.ravel()))
+                foot_contacts[index] = foot_state
+
+            foot_data = np.array(foot_data)
+            foot_data = foot_data.reshape(-1, 3)
+            foot_data[:, :2] = (foot_data[:, :2] - 5)  # TODO: Make this not hard-coded
+            sensor_pub.publish(Float32MultiArray(data=foot_data.ravel()))
 
         ###### -----------ldt---------------
         # joint_torques[i] = env.torques.detach().cpu().numpy()
