@@ -156,7 +156,7 @@ class LeggedRobot(BaseTask):
         Args:
             env_ids (list[int]): List of environment ids which must be reset
         """
-        pass
+        pass # Once we start the simulation, we don't ever want to reset it
 
         """
 

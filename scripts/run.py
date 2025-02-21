@@ -28,8 +28,9 @@ global target_state
 target_state= np.array([0., 0., 0.])
 
 def target_callback(data):
+    """React to new target position
+    """
     global target_state
-    # print("Updating target state to ", data.data)
     target_state = np.array(data.data)
 
 
@@ -164,7 +165,6 @@ def play_go2(headless=True):
     }
 
     # x_vel_cmd, y_vel_cmd, yaw_vel_cmd = 1.5, 0.0, 0.0
-    x_vel_cmd, y_vel_cmd, yaw_vel_cmd = 1.5, 0.0, 0.0
     body_height_cmd = 0.0
     step_frequency_cmd = 3.0  # 3.0
     gait = torch.tensor(gaits["trotting"])
@@ -175,13 +175,12 @@ def play_go2(headless=True):
     stance_width_cmd = 0.25
 
     measured_x_vels = np.zeros(num_eval_steps)
-    target_x_vels = np.ones(num_eval_steps) * x_vel_cmd
     joint_positions = np.zeros((num_eval_steps, 12))
     ###### -----------ldt---------------
     joint_torques = np.zeros((num_eval_steps, 12))
 
     obs = env.reset()
-    env.set_main_agent_pose([1,1,.5],[0,0,0,1])
+    env.set_main_agent_pose([1,1,.5],[0,0,0,1]) # Hard-coded starting position
     
 
     foot_contacts = [False, False, False, False]
@@ -240,10 +239,16 @@ def play_go2(headless=True):
         measured_x_vels[i] = env.base_lin_vel[0, 0]
         joint_positions[i] = env.dof_pos[0].cpu()
 
+
+        ############### PUBLISHING DATA TO ROS ###################
+
+        # Publishing joint positions
         t = time.time()
         header = Header(seq=0, stamp=rospy.Time(t), frame_id="World")
         position = env.dof_pos[0].cpu().numpy()
         pub.publish(JointState(header, name, position, velocity, effort))
+
+        # Publishing base transform
         base_pos = env.env.base_pos[0].cpu().numpy()
         base_quat = env.env.base_quat[0].cpu().numpy()
         # quat_indices = [1, 2, 3, 0]
@@ -261,6 +266,15 @@ def play_go2(headless=True):
             "Base",
             "World",
         )
+
+        # Publishing foot contacts
+        """
+        We log foot contacts if the following conditions hold:
+        - At this timestep, there is a contact force in the +z direction
+        - At the previous timestep, there was NOT a contact force in the +z direction
+        - There have been more than 100 timesteps (so that we don't get bad readings
+          at the beginning, when the robot is dropped and has to try to catch itself
+        """
 
         foot_data = []
 

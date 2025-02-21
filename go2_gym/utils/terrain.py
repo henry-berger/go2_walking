@@ -29,13 +29,11 @@ class Terrain:
 
         self.initialize_terrains()
 
+        # Create a sinusoidal terrain
+        # TODO: make this configurable
         xs, ys = np.meshgrid(np.linspace(-np.pi,np.pi,self.tot_cols), np.linspace(-np.pi,np.pi,self.tot_rows))
-
-        self.height_field_raw = np.int16((np.sin(xs) * np.cos(ys)) * 1024) 
-        print(self.height_field_raw)
-        self.cfg.vertical_scale = 2 ** -11
-        print(self.height_field_raw)
-
+        self.height_field_raw = np.int16((np.sin(xs) * np.cos(ys)) * 1024) # Heights as int
+        self.cfg.vertical_scale = 2 ** -11 # factor by which to scale
 
         self.heightsamples = self.height_field_raw.ravel()
         if self.type == "trimesh":
@@ -158,7 +156,7 @@ class Terrain:
             pass
         elif choice < proportions[8]:
             terrain_utils.random_uniform_terrain(terrain, min_height=-cfg.terrain_noise_magnitude,
-                                                 max_height=cfg.terrain_noise_magnitude, step=1.0,
+                                                 max_height=cfg.terrain_noise_magnitude, step=1.0, # Changed from step=0.05, not sure why
                                                  downsampled_scale=0.2)
         elif choice < proportions[9]:
             terrain_utils.random_uniform_terrain(terrain, min_height=-0.05, max_height=0.05,
