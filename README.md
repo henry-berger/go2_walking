@@ -1,3 +1,5 @@
+This is a fork of [Teddy-Liao/walk-these-ways-go2](https://github.com/Teddy-Liao/walk-these-ways-go2). It is designed to provide a simulation environment and locomotion policy as part of [this (private) repo](https://github.com/ialab-yale/whole_body_ergodic)
+
 # Sim-to-Real project on Unitree Go2
 
 ## Overview 

@@ -156,6 +156,9 @@ class LeggedRobot(BaseTask):
         Args:
             env_ids (list[int]): List of environment ids which must be reset
         """
+        pass # Once we start the simulation, we don't ever want to reset it
+
+        """
 
         if len(env_ids) == 0:
             return
@@ -237,6 +240,7 @@ class LeggedRobot(BaseTask):
 
         for i in range(len(self.lag_buffer)):
             self.lag_buffer[i][env_ids, :] = 0
+        """
 
     def set_idx_pose(self, env_ids, dof_pos, base_state):
         if len(env_ids) == 0:
