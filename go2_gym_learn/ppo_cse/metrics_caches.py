@@ -1,3 +1,4 @@
+#! /usr/bin/python
 from collections import defaultdict
 
 from ml_logger import logger

@@ -1,3 +1,4 @@
+#! /usr/bin/python
 def train_go2(headless=True):
 
     import isaacgym
