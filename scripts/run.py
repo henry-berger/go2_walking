@@ -108,7 +108,7 @@ def load_env(label, headless=False):
 
     from go2_gym.envs.wrappers.history_wrapper import HistoryWrapper
 
-    env = VelocityTrackingEasyEnv(sim_device="cuda:0", headless=False, cfg=Cfg)
+    env = VelocityTrackingEasyEnv(sim_device="cuda:0", headless=True, cfg=Cfg)
     env = HistoryWrapper(env)
 
     # load policy
@@ -153,7 +153,7 @@ def play_go2(headless=True):
 
     env, policy = load_env(label, headless=headless)
 
-    num_eval_steps = 2500  # 250
+    num_eval_steps = 10000  # 250
     gaits = {
         "pronking": [0, 0, 0],
         "trotting": [0.5, 0, 0],
@@ -189,37 +189,30 @@ def play_go2(headless=True):
         base_quat = env.env.base_quat.cpu()
         base_pos = env.env.base_pos[0].cpu().numpy()
         base_pos = base_pos - np.array([5.,5.,0.]) # TODO: Make this not hard-coded
-        target = target_state[:2] - base_pos[:2]
 
-        target_vec = torch.Tensor(np.array([[target[0], target[1], 0]]))
+        dx_world = target_state[:2] - base_pos[:2]
 
-        target = quat_rotate_inverse(base_quat, target_vec)[0,:2].cpu().numpy()
-        target_vel = target / np.sqrt(np.sum(np.square(target)))
-        
+        dx_world = torch.Tensor(np.array([[dx_world[0], dx_world[1], 0]]))
 
-        target_xvel = target_vel[0] * 1.5
-        target_yvel = target_vel[1] * 0
-        
-        if target_vel[1] * np.sign(target_vel[0]) > 0.2:
-            yaw_cmd = 1.5 * min(np.abs(target_vel[1]*3), 1)
-        elif target_vel[1] * np.sign(target_vel[0]) < -0.2:
-            yaw_cmd = -1.5 * min(np.abs(target_vel[1]*3), 1)
-        else:
+        dx_body = quat_rotate_inverse(base_quat, dx_world)[0,:2].cpu().numpy()
+        norm_dx_body = np.sqrt(np.sum(np.square(dx_body)))
+        dx_dir = dx_body / norm_dx_body
+
+        dx = dx_dir[0]
+        dy = dx_dir[1]
+        dth = np.arctan2(dy,dx)
+
+        if dth > np.pi/2:
+            dth -= np.pi
+        if dth < -np.pi/2:
+            dth += np.pi
+
+        target_xvel = dx * min(1.5, np.abs(dx_body[0])* 1.5)
+        target_yvel = dy * min(0.75, np.abs(dx_body[1]) * 1.5)
+        yaw_cmd = dth / np.abs(dth) * max(np.abs(dth), 1)
+        if norm_dx_body < 0.25:
             yaw_cmd = 0
 
-
-        # if np.abs(target_yvel) > 0.5:
-        #     target_yvel /= a
-
-        # yaw_cmd = 0
-
-        # x_axis = quat_rotate_inverse(base_quat, torch.Tensor([[1.,0.,0.]]))
-        # y_axis = quat_rotate_inverse(base_quat, torch.Tensor([[0.,1.,0.]]))
-
-        base_pos = env.env.base_pos[0].cpu().numpy()
-        base_pos = base_pos - np.array([5.,5.,0.]) # TODO: Make this not hard-coded
-        target = target_state[:2] - base_pos[:2]
-        target /= np.sqrt(np.sum(np.square(target)))
         env.commands[:, 0] = torch.Tensor([target_xvel])
         env.commands[:, 1] = torch.Tensor([target_yvel])
         env.commands[:, 2] = torch.Tensor([yaw_cmd])
