@@ -177,7 +177,7 @@ def play_go2(headless=True):
     joint_torques = np.zeros((num_eval_steps, 12))
 
     obs = env.reset()
-    env.set_main_agent_pose([4.5,4.5,1.5],[0,0,0,1]) # Hard-coded starting position
+    env.set_main_agent_pose([4.98,4.98,.25],[0,0,0,1]) # Hard-coded starting position
     
 
     foot_contacts = [False, False, False, False]
