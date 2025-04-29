@@ -5,6 +5,8 @@ assert isaacgym
 import torch
 import numpy as np
 import time
+import jaxlie
+import jax.numpy as jnp
 
 import glob
 import pickle as pkl
@@ -130,7 +132,7 @@ def play_go2(headless=True):
     rospy.Subscriber("target_pos", Float32MultiArray, target_callback)
     br = tf.TransformBroadcaster()
     pub = rospy.Publisher("joint_states", JointState, queue_size=10)
-    sensor_pub = rospy.Publisher("sensor_data", Float32MultiArray, queue_size=10)
+    sensor_pub = rospy.Publisher("raw_sensor_data", Float32MultiArray, queue_size=10)
     name = [
         "FL_hip_joint",
         "FL_thigh_joint",
@@ -253,7 +255,7 @@ def play_go2(headless=True):
                 base_quat[quat_indices[3]],
             ),
             rospy.Time.now(),
-            "Base",
+            "gt/Base",
             "World",
         )
 
@@ -277,10 +279,22 @@ def play_go2(headless=True):
 
                 foot_contacts[index] = foot_state
 
-            foot_data = np.array(foot_data)
-            foot_data = foot_data.reshape(-1, 3)
-            foot_data[:, :2] = (foot_data[:, :2] - 5)  # TODO: Make this not hard-coded
-            sensor_pub.publish(Float32MultiArray(data=foot_data.ravel()))
+            if len(foot_data) > 0:
+
+                foot_data = np.array(foot_data)
+                foot_data = foot_data.reshape(-1, 3)
+                foot_data[:, :2] = (foot_data[:, :2] - 5)  # TODO: Make this not hard-coded
+                base_tr = jaxlie.SE3(wxyz_xyz=jnp.array([
+                    base_quat[3],
+                    base_quat[0],
+                    base_quat[1],
+                    base_quat[2],
+                    base_pos[0]-5,
+                    base_pos[1]-5,
+                    base_pos[2],
+                ]))
+                foot_data = base_tr.inverse() @ foot_data
+                sensor_pub.publish(Float32MultiArray(data=foot_data.ravel()))
 
         ###### -----------ldt---------------
         # joint_torques[i] = env.torques.detach().cpu().numpy()
